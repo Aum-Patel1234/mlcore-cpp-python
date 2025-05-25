@@ -23,6 +23,9 @@ poetry.lock
 *.out
 *.a
 *.lib
+**/.cache/
+cpp/.cache/clangd/
+*.idx
 
 # === Build files ===
 build/

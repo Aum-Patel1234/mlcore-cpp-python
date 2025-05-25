@@ -1,7 +1,7 @@
 import sys
 import os, gc
 
-sys.path.append(os.path.abspath("../cpp/build"))
+sys.path.append(os.path.abspath("../../cpp/build"))
 
 import mlcore_cpp
 

@@ -10,7 +10,8 @@ find_package(pybind11 REQUIRED)
 include_directories(include)
 # add_subdirectory(src)
 
+file(GLOB SRC_FILES src/*.cpp)
+
 pybind11_add_module(mlcore_cpp
-    example.cpp
-    # src/linear_regression.cpp
+    ${SRC_FILES}
 )

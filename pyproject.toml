@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61.0", "pybind11", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mlcore"
+version = "0.1.0"
+description = "Machine Learning algorithms in Python with C++ performance core"
+authors = [{ name="Aum", email="aumpatel131@gmail.com" }]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "numpy",
+    # "scikit-learn"
+]

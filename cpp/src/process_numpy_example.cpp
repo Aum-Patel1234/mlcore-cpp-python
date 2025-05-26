@@ -36,6 +36,6 @@ void print_array(py::array ndarray) {
   std::cout << std::endl;
 }
 
-PYBIND11_MODULE(mlcore_cpp, m) {
-  m.def("print_array_eg", &print_array, "Print numpy array");
+void bind_process_numpy_example(py::module_ &m) {
+  m.def("print_array", &print_array);
 }

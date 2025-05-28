@@ -26,6 +26,7 @@ public:
   std::vector<int> shape() const;
   std::string dtype() const;
   std::vector<T> get() const;
+  void cpp_forloop() const;
 };
 
 #endif // !NDARRAY_H

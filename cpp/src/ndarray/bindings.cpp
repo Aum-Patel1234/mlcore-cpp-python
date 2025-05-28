@@ -14,6 +14,7 @@
       .def("dtype", &NdarrayWrapper<TYPE>::dtype)                              \
       .def("ndim", &NdarrayWrapper<TYPE>::ndim)                                \
       .def("get", &NdarrayWrapper<TYPE>::get)                                  \
+      .def("cpp_forloop", &NdarrayWrapper<TYPE>::cpp_forloop)                  \
       .def("shape", &NdarrayWrapper<TYPE>::shape);
 
 namespace py = pybind11;
@@ -36,6 +37,7 @@ public:
   int ndim() const { return this->arr.ndim(); }
   std::vector<int> shape() const { return this->arr.shape(); }
   std::vector<T> get() const { return this->arr.get(); }
+  void cpp_forloop() const { this->arr.cpp_forloop(); }
 };
 
 PYBIND11_MODULE(mlcore_cpp, m) {

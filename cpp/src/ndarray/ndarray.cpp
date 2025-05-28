@@ -1,4 +1,5 @@
 #include "ndarray.h"
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cxxabi.h>
@@ -18,9 +19,6 @@ template <typename T> Ndarray<T>::Ndarray(py::array_t<T> numpy_array) {
 
   T *ptr = static_cast<T *>(buffer.ptr);
   this->arr = std::vector<T>(ptr, ptr + buffer.size);
-  for (std::size_t i = 0; i < arr_size; i++)
-    std::cout << this->arr[i] << "\t";
-  std::cout << std::endl;
 }
 
 template <typename T> std::vector<T> Ndarray<T>::get() const {
@@ -64,6 +62,16 @@ template <typename T> std::string Ndarray<T>::dtype() const {
     return "long double";
   else
     return "unknown";
+}
+
+template <typename T> void Ndarray<T>::cpp_forloop() const {
+  auto start = std::chrono::high_resolution_clock::now();
+  for (int i = 0; i < 10000000; i++) {
+  }
+  auto end = std::chrono::high_resolution_clock::now();
+  auto duration =
+      std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+  std::cout << "C++ Time taken: " << duration.count() << " ms" << std::endl;
 }
 
 // IMPORTANT: as it helps in compile time

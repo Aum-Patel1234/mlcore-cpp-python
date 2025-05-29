@@ -57,3 +57,6 @@ core
 # === Misc ===
 .DS_Store
 *.bak
+
+# === bash files ===
+generate_stubs.sh

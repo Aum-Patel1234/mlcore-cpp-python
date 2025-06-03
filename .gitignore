@@ -60,3 +60,4 @@ core
 
 # === bash files ===
 generate_stubs.sh
+.clangd

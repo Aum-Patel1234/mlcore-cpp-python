@@ -11,8 +11,8 @@ print(dir(mlcore_cpp))
 
 arr = np.array(
     [
-        [5, 1],
-        [2, 4],
+        [5, 1, 4],
+        [2, 4, 3],
     ],
 )
 wrapper = mlcore_cpp.NdarrayWrapperInt8(arr)
@@ -20,7 +20,8 @@ print(wrapper.dtype())
 print(wrapper.size())
 print(wrapper.shape())
 print(wrapper.ndim())
-print(wrapper.get())
+print("Array made by xtensor - ", wrapper.get(), "\n")
+print("normal vec - ", wrapper.getVec())
 wrapper.cpp_forloop()
 
 start = time.time()

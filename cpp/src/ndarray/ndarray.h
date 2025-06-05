@@ -1,10 +1,12 @@
 #pragma once
 
-#include "xtensor.hpp"
 #include <cstddef>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <vector>
+#include <xtensor.hpp>
+#include <xtensor/containers/xstorage.hpp>
+#include <xtensor/core/xtensor_forward.hpp>
 namespace py = pybind11;
 #ifndef NDARRAY_H
 #define NDARRAY_H
@@ -12,6 +14,7 @@ namespace py = pybind11;
 template <typename T> class Ndarray {
 private:
   std::vector<T> arr;
+  xt::xarray<T> xarray;
   std::size_t arr_size;
   std::vector<int> shape_;
 
@@ -26,7 +29,8 @@ public:
   int ndim() const;
   std::vector<int> shape() const;
   std::string dtype() const;
-  std::vector<T> get() const;
+  py::array_t<T> get() const;
+  std::vector<T> getVec() const;
   void cpp_forloop() const;
 };
 

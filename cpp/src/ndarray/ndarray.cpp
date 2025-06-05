@@ -9,6 +9,9 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <xtensor/containers/xadapt.hpp>
+#include <xtensor/containers/xbuffer_adaptor.hpp>
+#include <xtensor/core/xtensor_forward.hpp>
 
 namespace py = pybind11;
 
@@ -19,10 +22,20 @@ template <typename T> Ndarray<T>::Ndarray(py::array_t<T> numpy_array) {
 
   T *ptr = static_cast<T *>(buffer.ptr);
   this->arr = std::vector<T>(ptr, ptr + buffer.size);
+  // xt::adapt allows xtensor to work with raw memory, such as the one from
+  // NumPy. xt::no_ownership() tells xtensor not to delete the memory, since
+  // Python owns it.
+  this->xarray = xt::adapt(static_cast<T *>(buffer.ptr), buffer.size,
+                           xt::no_ownership(), shape_);
 }
 
-template <typename T> std::vector<T> Ndarray<T>::get() const {
+template <typename T> std::vector<T> Ndarray<T>::getVec() const {
   return this->arr;
+}
+
+template <typename T> py::array_t<T> Ndarray<T>::get() const {
+  return py::array_t<T>(this->xarray.shape(), this->xarray.data());
+  // return this->arr;
 }
 
 template <typename T> std::size_t Ndarray<T>::size() const {

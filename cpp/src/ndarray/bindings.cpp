@@ -6,6 +6,7 @@
 #include <pybind11/stl.h>
 #include <stdexcept>
 #include <vector>
+#include <xtensor/core/xtensor_forward.hpp>
 
 #define BIND_NDARRAYWRAPPER(TYPE, NAME)                                        \
   py::class_<NdarrayWrapper<TYPE>>(m, NAME)                                    \
@@ -15,6 +16,7 @@
       .def("ndim", &NdarrayWrapper<TYPE>::ndim)                                \
       .def("get", &NdarrayWrapper<TYPE>::get)                                  \
       .def("cpp_forloop", &NdarrayWrapper<TYPE>::cpp_forloop)                  \
+      .def("getVec", &NdarrayWrapper<TYPE>::getVec)                            \
       .def("shape", &NdarrayWrapper<TYPE>::shape);
 
 namespace py = pybind11;
@@ -36,7 +38,8 @@ public:
 
   int ndim() const { return this->arr.ndim(); }
   std::vector<int> shape() const { return this->arr.shape(); }
-  std::vector<T> get() const { return this->arr.get(); }
+  std::vector<T> getVec() const { return this->arr.getVec(); }
+  py::array_t<T> get() const { return this->arr.get(); }
   void cpp_forloop() const { this->arr.cpp_forloop(); }
 };
 

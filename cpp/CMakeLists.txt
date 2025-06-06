@@ -11,6 +11,8 @@ find_package(Python REQUIRED COMPONENTS Interpreter Development NumPy)
 find_package(pybind11 REQUIRED CONFIG)
 find_package(xtensor REQUIRED)
 find_package(xtensor-python REQUIRED)
+find_package(BLAS REQUIRED)
+find_package(xtensor-blas REQUIRED)
 include_directories(include)
 # add_subdirectory(src)
 
@@ -20,6 +22,6 @@ pybind11_add_module(mlcore_cpp
     ${SRC_FILES}
 )
 
-target_link_libraries(mlcore_cpp PUBLIC pybind11::module xtensor xtensor-python Python::NumPy)
+target_link_libraries(mlcore_cpp PUBLIC pybind11::module xtensor xtensor-python xtensor-blas Python::NumPy) # ${BLAS_LIBRARIES}
 
 target_compile_definitions(mlcore_cpp PRIVATE VERSION_INFO=0.1.0)

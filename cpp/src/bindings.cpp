@@ -66,7 +66,9 @@ PYBIND11_MODULE(mlcore_cpp, m) {
   BIND_NDARRAYWRAPPER(long double, "NdarrayWrapperLongDouble");
 
   py::class_<LinearRegression>(m, "LinearRegression")
-      .def(py::init<py::array, int, double>())
+      .def(py::init<py::array_t<double>, py::array_t<double>, int, double>(),
+           py::arg("x"), py::arg("y"), py::arg("iterations") = 1000,
+           py::arg("lr") = 0.01)
       .def("fit", &LinearRegression::fit)
       .def("normalEquationFit", &LinearRegression::normalEquationFit)
       .def("predict", &LinearRegression::predict)

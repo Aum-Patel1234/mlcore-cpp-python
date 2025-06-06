@@ -14,13 +14,14 @@ private:
   xt::xarray<double> X;
   xt::xarray<double> y;
   xt::xarray<double> slope;
-  xt::xarray<double> intercepts;
+  // xt::xarray<double> intercepts;
+  double intercept;
   int iterations;
   double learning_rate;
 
 public:
-  explicit LinearRegression(py::array numpy_array, int iterations,
-                            double learning_rate);
+  LinearRegression(py::array_t<double> x, py::array_t<double> y, int iterations,
+                   double learning_rate);
 
   void fit();
   void normalEquationFit();

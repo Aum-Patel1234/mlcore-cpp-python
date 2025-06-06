@@ -20,6 +20,6 @@ pybind11_add_module(mlcore_cpp
     ${SRC_FILES}
 )
 
-target_link_libraries(mlcore_cpp PUBLIC pybind11::module xtensor-python Python::NumPy)
+target_link_libraries(mlcore_cpp PUBLIC pybind11::module xtensor xtensor-python Python::NumPy)
 
 target_compile_definitions(mlcore_cpp PRIVATE VERSION_INFO=0.1.0)

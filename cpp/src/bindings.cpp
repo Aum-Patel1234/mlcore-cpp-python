@@ -1,4 +1,6 @@
-#include "ndarray.h"
+#include "linear_model/linear_regression.h"
+#include "ndarray/ndarray.h"
+#include "xtensor_python_config.h"
 #include <cstdint>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -62,4 +64,11 @@ PYBIND11_MODULE(mlcore_cpp, m) {
   BIND_NDARRAYWRAPPER(float, "NdarrayWrapperFloat");
   BIND_NDARRAYWRAPPER(double, "NdarrayWrapperDouble");
   BIND_NDARRAYWRAPPER(long double, "NdarrayWrapperLongDouble");
+
+  py::class_<LinearRegression>(m, "LinearRegression")
+      .def(py::init<py::array, int, double>())
+      .def("fit", &LinearRegression::fit)
+      .def("normalEquationFit", &LinearRegression::normalEquationFit)
+      .def("predict", &LinearRegression::predict)
+      .def("printSlopeIntercept", &LinearRegression::printSlopeIntercept);
 }

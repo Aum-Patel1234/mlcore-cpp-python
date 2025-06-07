@@ -1,9 +1,12 @@
+#include <cstddef>
 #include <pybind11/cast.h>
 #include <sys/types.h>
+#include <vector>
 #include <xtensor/containers/xadapt.hpp>
 #include <xtensor/containers/xbuffer_adaptor.hpp>
 #include <xtensor/core/xmath.hpp>
 #include <xtensor/misc/xmanipulation.hpp>
+#include <xtensor/views/xstrided_view.hpp>
 #define FORCE_IMPORT_ARRAY
 
 #include "linear_regression.h"
@@ -90,33 +93,34 @@ void LinearRegression::fit() {
   std::cout << "Ran for iterations = " << this->iterations << std::endl;
 }
 
-// void LinearRegression::fit() {
-//   for (int i = 0; i < this->iterations; i++) {
-//     // y_pred = dot(X, slope) + intercept
-//     xt::xarray<double> y_pred = xt::linalg::dot(this->X, this->slope) +
-//     this->intercepts;
-//
-//     // error = y - y_pred
-//     xt::xarray<double> error = this->y - y_pred;
-//
-//     // gradient w.r.t slope: -2 * X^T * error / n
-//     xt::xarray<double> slope_gradient =
-//         -2.0 * xt::linalg::dot(xt::transpose(this->X), error) /
-//         this->X.shape()[0];
-//
-//     // gradient w.r.t intercept: -2 * mean(error)
-//     xt::xarray<double> intercept_gradient =
-//         -2.0 * xt::mean(error);
-//
-//     // update parameters
-//     this->slope -= this->learning_rate * slope_gradient;
-//     this->intercepts -= this->learning_rate * intercept_gradient;
-//   }
-//
-//   std::cout << "Ran for iterations = " << this->iterations << std::endl;
-// }
+void LinearRegression::normalEquationFit() {
+  // Correctly create a 2D ones column vector with shape {n,1}
+  auto ones_col =
+      xt::ones<double>(std::vector<std::size_t>{this->X.shape()[0], 1});
+  // std::cout << ones_col.shape()[0] << "," << ones_col.shape()[1] <<
+  // std::endl;
 
-void LinearRegression::normalEquationFit() {}
+  auto x = xt::hstack(xt::xtuple(this->X, ones_col));
+  // std::cout << x.shape()[0] << "," << x.shape()[1] << std::endl;
+
+  auto xT = xt::transpose(x);
+  // std::cout << "xT - " << xT.shape()[0] << "," << xT.shape()[1] << std::endl;
+
+  auto xTx = xt::linalg::dot(xT, x);
+  // std::cout << "xTx - " << xTx.shape()[0] << "," << xTx.shape()[1] <<
+  // std::endl;
+
+  auto y_col = xt::reshape_view(
+      this->y, std::vector<std::size_t>{this->y.shape()[0], 1});
+  auto xTy = xt::linalg::dot(xT, y_col);
+  // std::cout << "xTy - " << xTy.shape()[0] << "," << xTy.shape()[1] <<
+  // std::endl;
+
+  double lambda = 1e-5;
+  auto I = xt::eye<double>(xTx.shape()[0]);
+  auto theta = xt::linalg::dot(xt::linalg::inv(xTx + lambda * I), xTy);
+  std::cout << "final ans for Normal eq - " << theta << std::endl;
+}
 
 void LinearRegression::printSlopeIntercept() const {
   std::cout << "Slope - " << this->slope << std::endl;
@@ -124,7 +128,7 @@ void LinearRegression::printSlopeIntercept() const {
   std::cout << std::endl;
 }
 
-py::array LinearRegression::predict(py::array test) {
+py::array_t<double> LinearRegression::predict(py::array_t<double> test) {
   py::array prediction;
   return prediction;
 }

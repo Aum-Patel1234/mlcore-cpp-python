@@ -24,7 +24,9 @@ def test_linear_regression():
 
     # Print learned slope and intercept
     model.printSlopeIntercept()
-
+    print("\n")
+    model.normalEquationFit()
+    print("\n")
     model_sklearn = SklearnLinearRegression()
     model_sklearn.fit(X, y)
     print(f"Scikit-learn Slopes - {model_sklearn.coef_}")

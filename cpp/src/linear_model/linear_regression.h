@@ -26,7 +26,7 @@ public:
   void fit();
   void normalEquationFit();
   void printSlopeIntercept() const;
-  py::array predict(py::array X);
+  py::array_t<double> predict(py::array_t<double> X);
 };
 
 #endif // !LINEAR_REGRESSION

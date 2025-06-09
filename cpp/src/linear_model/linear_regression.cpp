@@ -94,7 +94,7 @@ void LinearRegression::fit() {
 }
 
 void LinearRegression::normalEquationFit() {
-  // Correctly create a 2D ones column vector with shape {n,1}
+  // col for intercept
   auto ones_col =
       xt::ones<double>(std::vector<std::size_t>{this->X.shape()[0], 1});
   // std::cout << ones_col.shape()[0] << "," << ones_col.shape()[1] <<
@@ -116,7 +116,7 @@ void LinearRegression::normalEquationFit() {
   // std::cout << "xTy - " << xTy.shape()[0] << "," << xTy.shape()[1] <<
   // std::endl;
 
-  double lambda = 1e-5;
+  double lambda = 1e-5; // to avoid nan error
   auto I = xt::eye<double>(xTx.shape()[0]);
   auto theta = xt::linalg::dot(xt::linalg::inv(xTx + lambda * I), xTy);
   std::cout << "final ans for Normal eq - " << theta << std::endl;

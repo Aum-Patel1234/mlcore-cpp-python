@@ -9,6 +9,7 @@
 #include <xtensor/views/xstrided_view.hpp>
 #define FORCE_IMPORT_ARRAY
 
+#include "common.hpp"
 #include "linear_regression.h"
 #include <iostream>
 #include <xtensor-blas/xlinalg.hpp>
@@ -22,24 +23,7 @@ LinearRegression::LinearRegression(py::array_t<double> x, py::array_t<double> y,
                                    int iterations = 1000, double lr = 0.01) {
   try {
     // std::cout << "here\n";
-    py::buffer_info x_buf = x.request();
-    py::buffer_info y_buf = y.request();
-
-    std::vector<std::size_t> x_shape(x_buf.shape.begin(), x_buf.shape.end());
-    std::vector<std::size_t> x_strides(x_buf.strides.begin(),
-                                       x_buf.strides.end());
-
-    std::vector<std::size_t> y_shape(y_buf.shape.begin(), y_buf.shape.end());
-    std::vector<std::size_t> y_strides(y_buf.strides.begin(),
-                                       y_buf.strides.end());
-
-    // Correct call with 6 parameters: (ptr, size, ownership, shape, strides)
-    this->X = xt::adapt(static_cast<double *>(x_buf.ptr),
-                        x_buf.size, // total number of elements
-                        xt::no_ownership(), x_shape, x_strides);
-
-    this->y = xt::adapt(static_cast<double *>(y_buf.ptr), y_buf.size,
-                        xt::no_ownership(), y_shape, y_strides);
+    helper(this->X, this->y, x, y);
 
     // std::cout << "here 2\n";
     if (this->X.dimension() != 2)

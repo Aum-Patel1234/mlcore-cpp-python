@@ -1,4 +1,5 @@
 #include "linear_model/linear_regression.h"
+#include "linear_model/logistic_regression.h"
 #include "ndarray/ndarray.h"
 #include "xtensor_python_config.h"
 #include <cstdint>
@@ -73,4 +74,11 @@ PYBIND11_MODULE(mlcore_cpp, m) {
       .def("normalEquationFit", &LinearRegression::normalEquationFit)
       .def("predict", &LinearRegression::predict)
       .def("printSlopeIntercept", &LinearRegression::printSlopeIntercept);
+
+  py::class_<LogisticRegression>(m, "LogisticRegression")
+      .def(py::init<double>(), py::arg("alpha") = 0.01)
+      .def("fit", &LogisticRegression::fit, py::arg("x"), py::arg("y"),
+           py::arg("iterations") = 1000)
+      .def("predict", &LogisticRegression::predict, py::arg("X"))
+      .def("printSlopeIntercept", &LogisticRegression::printSlopeIntercept);
 }

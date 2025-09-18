@@ -1,11 +1,14 @@
 #include "logistic_regression.h"
 #include "common.hpp"
 #include <cmath>
+#include <cstddef>
 #include <pybind11/pytypes.h>
+#include <vector>
 #include <xtensor-blas/xlinalg.hpp>
 #include <xtensor-python/pyarray.hpp>
 #include <xtensor/containers/xadapt.hpp>
 #include <xtensor/core/xmath.hpp>
+#include <xtensor/core/xoperation.hpp>
 #include <xtensor/core/xtensor_forward.hpp>
 #include <xtensor/misc/xmanipulation.hpp>
 namespace py = pybind11;
@@ -80,7 +83,43 @@ void LogisticRegression::fit(py::array_t<double> &x_arr,
 }
 
 py::array_t<double> LogisticRegression::predict(py::array_t<double> &X) {
-  return py::none();
+  // theta - (n,1) , X - (m, n)
+  if (this->theta.shape()[0] != X.shape()[1])
+    throw std::runtime_error(
+        "features of the input is not same as that of training data!!");
+
+  xt::xarray<double> input;
+  helperOne(input, X);
+  // std::cout << "Input (shape: ";
+  // for (auto s : input.shape())
+  //   std::cout << s << " ";
+  // std::cout << "):\n";
+  //
+  // std::size_t i = 0;
+  // for (auto it = input.begin(); it != input.end(); ++it) {
+  //   std::cout << *it << " ";
+  //   i++;
+  //   if (i % input.shape()[1] == 0)
+  //     std::cout << "\n";  }
+  // std::cout << std::endl;
+
+  xt::xarray<double> z = xt::linalg::dot(input, this->theta) + this->bias;
+  xt::xarray<double> prediction = 1.0 / (1 + xt::exp(-z));
+  // xt::xarray<double> prediction = xt::where(sigmoid >= 0.5, 1, 0);
+
+  auto shape = prediction.shape();
+  std::vector<std::size_t> dims(shape.begin(), shape.end());
+  py::array_t<double> out(dims);
+
+  // copy into numpy buffer
+  auto buffer = out.request();
+  double *ptr = static_cast<double *>(buffer.ptr);
+  std::size_t idx = 0;
+
+  for (auto it = prediction.begin(); it != prediction.end(); it++)
+    ptr[idx++] = static_cast<double>(*it);
+
+  return out;
 }
 
 void LogisticRegression::printSlopeIntercept() const {

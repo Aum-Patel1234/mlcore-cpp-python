@@ -10,13 +10,15 @@ y = np.array([0, 1, 1, 1], dtype=np.float64).reshape(-1, 1)
 
 # ---- Your C++ Logistic Regression ----
 log_reg = mlcore_cpp.LogisticRegression(alpha=0.01)
-iter = log_reg.fit(X, y, iterations=250)
+iter = log_reg.fit(X, y, iterations=230)
 
 print("\n[C++ Logistic Regression Results]")
 log_reg.printSlopeIntercept()
 
-# preds_cpp = log_reg.predict(X)
-# print("Predictions (C++):", np.round(preds_cpp, 3))  # rounded to 3 decimals
+preds_cpp = log_reg.predict(X)
+print(
+    "Predictions (C++):", np.round(preds_cpp.reshape(1, 4), 3)
+)  # rounded to 3 decimals
 
 
 # ---- Sklearn Logistic Regression ----

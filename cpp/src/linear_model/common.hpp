@@ -6,3 +6,5 @@ namespace py = pybind11;
 
 void helper(xt::xarray<double> &X, xt::xarray<double> &Y,
             py::array_t<double> &x, py::array_t<double> &y);
+
+void helperOne(xt::xarray<double> &X, py::array_t<double> &x);

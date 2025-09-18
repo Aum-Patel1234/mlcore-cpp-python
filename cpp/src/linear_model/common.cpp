@@ -17,7 +17,6 @@ void helper(xt::xarray<double> &X, xt::xarray<double> &Y,
   for (auto s : y_buf.strides)
     y_strides.push_back(static_cast<std::size_t>(s) / sizeof(double));
 
-  // Correct call with strides in elements
   X = xt::adapt(static_cast<double *>(x_buf.ptr),
                 x_buf.size,         // total number of elements
                 xt::no_ownership(), // we don't own Python memory
@@ -25,4 +24,17 @@ void helper(xt::xarray<double> &X, xt::xarray<double> &Y,
 
   Y = xt::adapt(static_cast<double *>(y_buf.ptr), y_buf.size,
                 xt::no_ownership(), y_shape, y_strides);
+}
+
+void helperOne(xt::xarray<double> &X, py::array_t<double> &x) {
+  py::buffer_info buffer = x.request();
+
+  std::vector<std::size_t> shape(buffer.shape.begin(), buffer.shape.end());
+
+  std::vector<std::size_t> strides;
+  for (long stride : buffer.strides)
+    strides.emplace_back(static_cast<std::size_t>(stride) / sizeof(double));
+
+  X = xt::adapt(static_cast<double *>(buffer.ptr), buffer.size,
+                xt::no_ownership(), shape, strides);
 }

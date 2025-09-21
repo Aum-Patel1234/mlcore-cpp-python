@@ -24,6 +24,8 @@ public:
            int iterations = 1000);
   void printSlopeIntercept() const;
   py::array_t<double> predict(py::array_t<double> &X);
+  void printCost(xt::xarray<double> &y, xt::xarray<double> &a, int m,
+                 int i) const;
 };
 
 #endif // !LOGISITIC_REGRESSION

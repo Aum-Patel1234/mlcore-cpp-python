@@ -2,6 +2,7 @@
 #include "common.hpp"
 #include <cmath>
 #include <cstddef>
+#include <iostream>
 #include <pybind11/pytypes.h>
 #include <vector>
 #include <xtensor-blas/xlinalg.hpp>
@@ -43,26 +44,26 @@ void LogisticRegression::fit(py::array_t<double> &x_arr,
   this->theta = xt::zeros<double>({n, 1});
   // theta = std::make_unique<xt::xarray<double>>(xt::zeros<double>({n, 1}));
 
-  auto print_iter = [&](int it, const xt::xarray<double> &z,
-                        const xt::xarray<double> &a,
-                        const xt::xarray<double> &diff,
-                        const xt::xarray<double> &dw, double db) {
-    std::cout << "=== iter " << it << " ===\n";
-    std::cout << "z: " << z << "\n";
-    std::cout << "a: " << a << "\n";
-    std::cout << "diff: " << diff << "\n";
-    std::cout << "dw: " << dw << "\n";
-    std::cout << "db: " << db << "\n";
-    std::cout << "theta: " << this->theta << "\n";
-    std::cout << "bias: " << this->bias << "\n";
-    std::cout << "---------------------\n";
-  };
+  // auto print_iter = [&](int it, const xt::xarray<double> &z,
+  //                       const xt::xarray<double> &a,
+  //                       const xt::xarray<double> &diff,
+  //                       const xt::xarray<double> &dw, double db) {
+  //   std::cout << "=== iter " << it << " ===\n";
+  //   std::cout << "z: " << z << "\n";
+  //   std::cout << "a: " << a << "\n";
+  //   std::cout << "diff: " << diff << "\n";
+  //   std::cout << "dw: " << dw << "\n";
+  //   std::cout << "db: " << db << "\n";
+  //   std::cout << "theta: " << this->theta << "\n";
+  //   std::cout << "bias: " << this->bias << "\n";
+  //   std::cout << "---------------------\n";
+  // };
 
   for (int _ = 0; _ < iterations; _++) {
     // z: (m,1)
     auto z = xt::linalg::dot(this->X, theta) + this->bias;
     // a= (m,1)
-    auto a = 1.0 / (1.0 + xt::exp(-z));
+    xt::xarray<double> a = 1.0 / (1.0 + xt::exp(-z));
     // diff= m,1
     auto diff = a - this->y;
 
@@ -73,13 +74,22 @@ void LogisticRegression::fit(py::array_t<double> &x_arr,
     auto db_arr = xt::sum(diff) / static_cast<double>(m);
     double db = db_arr(0);
 
-    if (_ == 0 || _ == iterations - 1) {
-      print_iter(_, z, a, diff, dw, db);
+    if (_ % 20 == 0) {
+      // print_iter(_, z, a, diff, dw, db);
+      printCost(y, a, m, _);
     }
 
     theta -= alpha * dw;
     bias -= alpha * db;
   }
+}
+
+void LogisticRegression::printCost(xt::xarray<double> &y, xt::xarray<double> &a,
+                                   int m, int i) const {
+  // L(a, y) = 1/m* [y.log(a) + (1-y)log(1-a)]
+  double inv_m = 1.0 / static_cast<double>(m);
+  auto cost = -inv_m * xt::sum(y * xt::log(a) + (1 - y) * xt::log(1 - a));
+  std::cout << "Cost (" << i << ") = " << cost(0) << std::endl;
 }
 
 py::array_t<double> LogisticRegression::predict(py::array_t<double> &X) {

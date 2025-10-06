@@ -9,7 +9,7 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
-    # Set default shell to bash -l to ensure conda environments are activated
+
     defaults:
       run:
         shell: bash -l {0}
@@ -18,7 +18,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Mambaforge (fast conda)
+      - name: Setup Mambaforge
         uses: conda-incubator/setup-miniconda@v3
         with:
           auto-activate-base: true
@@ -29,30 +29,18 @@ jobs:
 
       - name: Install all dependencies with Mamba
         run: |
-          # Install C++, Python, and build tools from conda-forge channel
-          # This single command replaces apt-get and pip
           mamba install -y \
-            cmake \
-            cxx-compiler \
-            numpy \
-            pybind11 \
-            scikit-learn \
-            pandas \
-            xtensor \
-            xtensor-python \
-            xtensor-blas \
-            openblas
+            cmake cxx-compiler numpy pybind11 scikit-learn pandas \
+            xtensor xtensor-python xtensor-blas openblas
 
       - name: Configure & build with CMake
         run: |
           mkdir -p cpp/build
           cd cpp/build
-          # No hints needed! CMake automatically finds everything in the active conda env.
           cmake .. -DCMAKE_BUILD_TYPE=Release
           cmake --build . --config Release -- -j2
 
       - name: Test Python bindings
         run: |
-          # Add the build directory to the Python path
           export PYTHONPATH=$PYTHONPATH:$(pwd)/cpp/build
           python -c "import mlcore_cpp; print('✅ Import successful!')"

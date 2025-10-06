@@ -10,9 +10,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      # The separate CMake install step is usually not needed;
-      # the runner's version is recent enough.
-
       - name: Install dependencies
         run: |
           sudo apt-get update

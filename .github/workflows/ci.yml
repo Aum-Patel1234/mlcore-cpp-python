@@ -1,4 +1,4 @@
-name: CI - Build + Test (Ubuntu + vcpkg)
+name: CI - Build + Test (Ubuntu + Mamba)
 
 on:
   push:
@@ -9,53 +9,50 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Set default shell to bash -l to ensure conda environments are activated
+    defaults:
+      run:
+        shell: bash -l {0}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Python 3.11
-        uses: actions/setup-python@v4
+      - name: Setup Mambaforge (fast conda)
+        uses: conda-incubator/setup-miniconda@v3
         with:
+          auto-activate-base: true
           python-version: '3.11'
+          miniconda-version: 'latest'
+          mamba-version: '*'
+          channels: conda-forge
 
-      - name: Install system packages
+      - name: Install all dependencies with Mamba
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential git curl cmake python3-dev python3-pip python3-venv
-          python -m pip install --upgrade pip
+          # Install C++, Python, and build tools from conda-forge channel
+          # This single command replaces apt-get and pip
+          mamba install -y \
+            cmake \
+            cxx-compiler \
+            numpy \
+            pybind11 \
+            scikit-learn \
+            pandas \
+            xtensor \
+            xtensor-python \
+            xtensor-blas \
+            openblas
 
-      - name: Install Python dependencies
-        run: |
-          pip install -r requirements.txt
-
-      - name: Clone and bootstrap vcpkg
-        run: |
-          git clone https://github.com/microsoft/vcpkg.git $GITHUB_WORKSPACE/vcpkg
-          $GITHUB_WORKSPACE/vcpkg/bootstrap-vcpkg.sh
-          $GITHUB_WORKSPACE/vcpkg/vcpkg install xtensor xtensor-python xtensor-blas openblas:x64-linux
-
-      - name: Configure & build C++ extension
+      - name: Configure & build with CMake
         run: |
           mkdir -p cpp/build
           cd cpp/build
-
-          PY_BIN=$(which python)
-          NUMPY_INCLUDE=$(python -c "import numpy as np; print(np.get_include())")
-
-          echo "Python executable: $PY_BIN"
-          echo "NumPy include: $NUMPY_INCLUDE"
-
-          cmake .. \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE=$GITHUB_WORKSPACE/vcpkg/scripts/buildsystems/vcpkg.cmake \
-            -DVCPKG_TARGET_TRIPLET=x64-linux \
-            -DPython3_EXECUTABLE="$PY_BIN" \
-            -DNUMPY_INCLUDE_DIR="$NUMPY_INCLUDE"
-
+          # No hints needed! CMake automatically finds everything in the active conda env.
+          cmake .. -DCMAKE_BUILD_TYPE=Release
           cmake --build . --config Release -- -j2
 
-      - name: Smoke test - import built module
+      - name: Test Python bindings
         run: |
-          python -c "import sys; sys.path.append('cpp/build'); import mlcore_cpp; print('✅ Import successful!')"
+          # Add the build directory to the Python path
+          export PYTHONPATH=$PYTHONPATH:$(pwd)/cpp/build
+          python -c "import mlcore_cpp; print('✅ Import successful!')"

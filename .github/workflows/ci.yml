@@ -71,6 +71,7 @@ jobs:
           cmake --build . --config Release -- -j2
         shell: bash
 
-      - name: Smoke test: import built module
+      - name: Smoke test - import built module
         run: |
-          python -c 'import sys; sys.path.append("cpp/build"); import mlcore_cpp; print("Import successful!")'
+          export PYTHONPATH=$PYTHONPATH:$(pwd)/cpp/build
+          python -c "import mlcore_cpp; print('✅ Import successful!')"

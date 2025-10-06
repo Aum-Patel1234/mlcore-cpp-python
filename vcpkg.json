@@ -2,6 +2,7 @@
   "name": "mlcore",
   "version-string": "0.1.0",
   "dependencies": [
+    "pybind11",
     "xtensor",
     "xtensor-python",
     "xtensor-blas",

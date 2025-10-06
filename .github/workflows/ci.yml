@@ -1,4 +1,4 @@
-name: CI - Build + Test (Ubuntu)
+name: CI - Build + Test
 
 on:
   push:
@@ -19,11 +19,16 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Setup and run vcpkg
+        uses: microsoft/vcpkg-action@v5
+        with:
+          # This action will find the vcpkg.json file you create (see below)
+          # and install the C++ dependencies listed in it.
+          vcpkgDirectory: ${{ github.workspace }}
+          vcpkgJsonGlob: 'vcpkg.json'
+
+      - name: Install Python dependencies
         run: |
-          sudo apt-get update
-          # This is the key dependency for C++ headers (Python.h)
-          sudo apt-get install -y python3-dev
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
@@ -31,14 +36,9 @@ jobs:
         run: |
           mkdir -p cpp/build
           cd cpp/build
-
-          # Get the Python executable path
-          PY_EXECUTABLE=$(which python)
-          echo "Using Python executable: $PY_EXECUTABLE"
-
-          # Run CMake, providing the hint that the OLD FindPython module expects.
-          # This matches what your CMakeLists.txt is likely using.
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DPYTHON_EXECUTABLE="$PY_EXECUTABLE"
+          # The vcpkg-action automatically sets the CMAKE_TOOLCHAIN_FILE env var,
+          # so CMake finds the libraries without any extra hints.
+          cmake .. -DCMAKE_BUILD_TYPE=Release
           cmake --build . --config Release
 
       - name: Test Python bindings

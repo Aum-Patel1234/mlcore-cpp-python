@@ -1,0 +1,50 @@
+name: CI - Build + Test (Ubuntu)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout your repo
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2️⃣ Set up Python
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # 3️⃣ Install CMake
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.26'
+
+      # 4️⃣ Install Python dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pybind11 pytest
+
+      # 5️⃣ Build C++ extension with CMake
+      - name: Build C++ extension
+        run: |
+          mkdir -p cpp/build
+          cd cpp/build
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake --build . --config Release
+
+      # 6️⃣ Test Python bindings
+      - name: Test Python bindings
+        run: |
+          # Add built module to PYTHONPATH
+          python -c "import sys; sys.path.append('cpp/build'); import mlcore_cpp; print('Import successful!')"
+          # pytest -q

@@ -9,6 +9,7 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -18,29 +19,45 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.26'
+
+      - name: Install system dependencies and Python packages
         run: |
           sudo apt-get update
-          # This is the most important dependency, providing Python.h for C++
-          sudo apt-get install -y python3-dev
+          # python3-dev gives Python headers (Python.h) required by pybind11/CMake
+          sudo apt-get install -y python3-dev python3-pip python3-venv build-essential
           python -m pip install --upgrade pip
-          # Explicitly install numpy, as CMake often needs its headers
-          pip install numpy
-          # Install your project's other requirements
+          # install everything from requirements.txt (must include numpy, pybind11)
           pip install -r requirements.txt
 
-      - name: Configure and build C++ extension
+      - name: Build C++ extension (CMake)
         run: |
           mkdir -p cpp/build
           cd cpp/build
-          # REMOVED HINT: Let modern CMake auto-discover Python from the environment
-          # set up by actions/setup-python. This is more reliable.
-          cmake .. -DCMAKE_BUILD_TYPE=Release
+
+          # Explicitly expose the Python executable + include dirs to CMake
+          PY_BIN=$(which python)
+          PY_INCLUDE=$(python -c "from sysconfig import get_paths as gp; print(gp()['include'])")
+          NUMPY_INCLUDE=$(python -c "import numpy as np; print(np.get_include())")
+
+          echo "Using python: $PY_BIN"
+          echo "Python include: $PY_INCLUDE"
+          echo "NumPy include: $NUMPY_INCLUDE"
+
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DPython3_EXECUTABLE="$PY_BIN" \
+            -DPython3_INCLUDE_DIR="$PY_INCLUDE" \
+            -DNUMPY_INCLUDE_DIR="$NUMPY_INCLUDE"
+
           cmake --build . --config Release
 
       - name: Test Python bindings
         run: |
-          # Add the build directory to Python's path to find the .so/.pyd file
-          export PYTHONPATH=$PYTHONPATH:$(pwd)/cpp/build
-          python -c "import sys; import mlcore_cpp; print('Import successful!')"
-          # Then run your tests, e.g., pytest
+          # Add the build directory to PYTHONPATH and try importing the built module
+          python -c "import sys; sys.path.append('cpp/build'); import mlcore_cpp; print('Import successful!')"
+          # pytest -q   # enable if you have tests ready
+

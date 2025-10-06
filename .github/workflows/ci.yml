@@ -1,4 +1,3 @@
-
 name: CI - Build + Test (Ubuntu)
 
 on:
@@ -20,53 +19,30 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.26'
-
-      - name: Install system dependencies and Python packages
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          # Python headers + build tools
-          sudo apt-get install -y python3-dev python3-pip python3-venv build-essential
+          # This is the key dependency for C++ headers (Python.h)
+          sudo apt-get install -y python3-dev
           python -m pip install --upgrade pip
-          # install from requirements.txt (must include numpy, pybind11, etc.)
           pip install -r requirements.txt
 
-      - name: Build C++ extension (CMake) - pass Python & NumPy to CMake
+      - name: Configure and build C++ extension
         run: |
-          set -e
-
           mkdir -p cpp/build
           cd cpp/build
 
-          # locate python executable and include dirs
-          PY_BIN=$(which python)
-          PY_INCLUDE=$(python -c "import sysconfig; print(sysconfig.get_paths()['include'])")
-          PY_LIB=$(python -c "import sysconfig, os; ld = sysconfig.get_config_var('LDLIBRARY'); libdir = sysconfig.get_config_var('LIBDIR'); print(os.path.join(libdir, ld) if ld and libdir else '')")
-          NUMPY_INCLUDE=$(python -c "import numpy as np; print(np.get_include())")
+          # Get the Python executable path
+          PY_EXECUTABLE=$(which python)
+          echo "Using Python executable: $PY_EXECUTABLE"
 
-          echo "Using python: $PY_BIN"
-          echo "Python include: $PY_INCLUDE"
-          echo "Python lib: $PY_LIB"
-          echo "NumPy include: $NUMPY_INCLUDE"
-
-          # pass both Python*/Python variable names that different Find modules might expect
-          cmake .. \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DPython_EXECUTABLE="$PY_BIN" \
-            -DPython_INCLUDE_DIRS="$PY_INCLUDE" \
-            -DPython_LIBRARIES="$PY_LIB" \
-            -DPython_NumPy_INCLUDE_DIRS="$NUMPY_INCLUDE" \
-            -DPython_NumPy_INCLUDE_DIR="$NUMPY_INCLUDE" \
-            -DPython3_EXECUTABLE="$PY_BIN" \
-            -DPython3_INCLUDE_DIR="$PY_INCLUDE" \
-            -DNUMPY_INCLUDE_DIR="$NUMPY_INCLUDE"
-
+          # Run CMake, providing the hint that the OLD FindPython module expects.
+          # This matches what your CMakeLists.txt is likely using.
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DPYTHON_EXECUTABLE="$PY_EXECUTABLE"
           cmake --build . --config Release
 
       - name: Test Python bindings
         run: |
-          python -c "import sys; sys.path.append('cpp/build'); import mlcore_cpp; print('Import successful!')"
-          # pytest -q   # enable if you have tests
+          # Add the build directory to PYTHONPATH so the module can be found
+          export PYTHONPATH=$PYTHONPATH:$(pwd)/cpp/build
+          python -c "import mlcore_cpp; print('Import successful!')"

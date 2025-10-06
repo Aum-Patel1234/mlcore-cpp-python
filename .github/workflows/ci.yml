@@ -9,7 +9,6 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
-
     defaults:
       run:
         shell: bash -l {0}
@@ -22,7 +21,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
           auto-activate-base: true
-          python-version: '3.11'
+          python-version: '3.11' # The CI will use 3.11, but the find_package can be 3.7+
           miniconda-version: 'latest'
           mamba-version: '*'
           channels: conda-forge

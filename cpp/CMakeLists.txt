@@ -7,7 +7,7 @@ project(mlcore_cpp)
 set(CMAKE_CXX_STANDARD 17)
 set(PYBIND11_FINDPYTHON ON)
 
-find_package(Python 3.7 REQUIRED COMPONENTS Interpreter Development NumPy)
+find_package(Python REQUIRED COMPONENTS Interpreter Development NumPy)
 find_package(pybind11 REQUIRED CONFIG)
 find_package(xtensor REQUIRED)
 find_package(xtensor-python REQUIRED)

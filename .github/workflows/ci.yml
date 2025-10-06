@@ -1,103 +1,86 @@
-name: CI
+# A simple name for your workflow
+name: Build C++ Module
 
+# This tells GitHub when to run the workflow.
+# It will run on any push or pull request to your 'main' branch.
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
 
+# A workflow is made up of one or more "jobs" that can run in parallel or sequence.
 jobs:
+  # We only have one job, named 'build'.
   build:
+    # This job will run on the latest version of Ubuntu Linux.
     runs-on: ubuntu-latest
-    env:
-      VCPKG_ROOT: ${{ runner.temp }}/vcpkg
-      BUILD_DIR: cpp/build
-      STUB_OUT: cpp/stubs
 
+    # 'steps' are the sequence of tasks that will be executed.
     steps:
-      - name: Checkout repository
+      # 1. Checkout your code
+      # This step downloads your repository's code into the runner.
+      - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2. Install C++ dependencies using vcpkg
+      # This action reads your 'vcpkg.json' file and installs the libraries you need.
+      # It also configures the environment so CMake can find them automatically.
+      - name: Install vcpkg dependencies
+        uses: lukka/run-vcpkg@v11
+        with:
+          # This specifies where vcpkg should be installed.
+          vcpkgDirectory: ${{ github.workspace }}/vcpkg
+          # This tells the action where to find your manifest file.
+          vcpkgJsonGlob: 'vcpkg.json'
+
+      # 3. Set up Python
+      # This action installs a specific version of Python.
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: '3.10'
 
-      - name: Cache pip packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install system packages (build tools, OpenBLAS)
+      # 4. Install Python packages
+      # This step reads your 'requirements.txt' and installs the Python libraries.
+      - name: Install Python packages
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build pkg-config libopenblas-dev
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: Install Python deps (pip)
-        run: python -m pip install --upgrade pip setuptools wheel
-      - name: Install Python test deps
+      # 5. Configure the C++ project using CMake
+      # This step prepares the build files. It points to your source code in the 'cpp' folder
+      # and tells CMake to use the vcpkg toolchain file to find your C++ libraries.
+      - name: Configure CMake
+        run: >
+          cmake -B cpp/build -S cpp
+          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+
+      # 6. Build the project
+      # This step compiles your C++ code into the 'mlcore_cpp' Python module.
+      - name: Build project with CMake
+        run: cmake --build cpp/build --config Release
+
+      # 7. Generate Python stubs (.pyi files)
+      # This step runs your 'generate_stubs.sh' script to create type hints for your module.
+      - name: Generate pyi stubs
         run: |
-          python -m pip install -r requirements.txt
-          python -m pip install pytest pybind11-stubgen || true
-
-      - name: Bootstrap vcpkg (clone & build)
-        run: |
-          git clone --depth=1 https://github.com/microsoft/vcpkg.git "${VCPKG_ROOT}"
-          "${VCPKG_ROOT}/bootstrap-vcpkg.sh"
-
-      - name: Cache vcpkg installed folder
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ env.VCPKG_ROOT }}/installed
-            ${{ env.VCPKG_ROOT }}/packages
-            ${{ env.VCPKG_ROOT }}/buildtrees
-          key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
-          restore-keys: |
-            ${{ runner.os }}-vcpkg-
-
-      - name: Install vcpkg dependencies (manifest mode)
-        working-directory: ${{ github.workspace }}
-        run: |
-          # install libs specified in vcpkg.json for x64-linux
-          "${VCPKG_ROOT}/vcpkg" install --triplet x64-linux --manifest
-
-      - name: Configure with CMake
-        working-directory: ${{ github.workspace }}
-        run: |
-          cmake -S cpp -B ${BUILD_DIR} \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake \
-            -G "Ninja"
-
-      - name: Build
-        run: cmake --build ${BUILD_DIR} --parallel
-
-      - name: Install python package
-        run: python -m pip install .
-
-      - name: Generate stubs (if .env exists)
-        run: |
-          if [ -f ".env" ]; then
-            chmod +x generate_stubs.sh
-            export BUILD_DIR=${BUILD_DIR}
-            export STUB_OUT=${STUB_OUT}
-            ./generate_stubs.sh
-          else
-            echo ".env not found — skipping stub generation"
-          fi
-
-      - name: Run tests
-        run: pytest -q || true
-
-      - name: Upload build artifacts (optional)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-files
-          path: |
-            ${BUILD_DIR}
-            cpp/*.so
+          # Set the environment variables that your script needs
+          export BUILD_DIR=${{ github.workspace }}/cpp/build
+          export STUB_OUT=${{ github.workspace }}/cpp/stubs
+          
+          # Make sure the output directory exists before running the script
+          mkdir -p $STUB_OUT
+          
+          # Execute the script
+          bash ./generate_stubs.sh
+          
+      # 8. (Optional) Run tests
+      # You can uncomment this section if you add tests in your 'tests' folder.
+      # - name: Run tests
+      #   run: |
+      #     # Add the new C++ module to the Python path so it can be imported
+      #     export PYTHONPATH=${{ github.workspace }}/cpp/build:$PYTHONPATH
+      #     # Install pytest and run it
+      #     pip install pytest
+      #     pytest tests/

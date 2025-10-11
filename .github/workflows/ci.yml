@@ -1,86 +1,96 @@
-# A simple name for your workflow
 name: Build C++ Module
 
-# This tells GitHub when to run the workflow.
-# It will run on any push or pull request to your 'main' branch.
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
-# A workflow is made up of one or more "jobs" that can run in parallel or sequence.
 jobs:
-  # We only have one job, named 'build'.
   build:
-    # This job will run on the latest version of Ubuntu Linux.
     runs-on: ubuntu-latest
+    env:
+      BUILD_DIR: ${{ github.workspace }}/cpp/build
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
 
-    # 'steps' are the sequence of tasks that will be executed.
     steps:
-      # 1. Checkout your code
-      # This step downloads your repository's code into the runner.
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Install C++ dependencies using vcpkg
-      # This action reads your 'vcpkg.json' file and installs the libraries you need.
-      # It also configures the environment so CMake can find them automatically.
-      - name: Install vcpkg dependencies
-        uses: lukka/run-vcpkg@v11
-        with:
-          # This specifies where vcpkg should be installed.
-          vcpkgDirectory: ${{ github.workspace }}/vcpkg
-          # This tells the action where to find your manifest file.
-          vcpkgJsonGlob: 'vcpkg.json'
-
-      # 3. Set up Python
-      # This action installs a specific version of Python.
-      - name: Set up Python
+      - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
-      # 4. Install Python packages
-      # This step reads your 'requirements.txt' and installs the Python libraries.
-      - name: Install Python packages
+      
+      - name: Show Python info (debug)
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python -V
+          python -c "import sys; print('prefix=', sys.prefix)"
+          pip --version
 
-      # 5. Configure the C++ project using CMake
-      # This step prepares the build files. It points to your source code in the 'cpp' folder
-      # and tells CMake to use the vcpkg toolchain file to find your C++ libraries.
+      - name: Install system packages (build-essential, ninja, pkg-config)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential ninja-build pkg-config
+
+      - name: Install pip requirements (if requirements.txt exists)
+        run: |
+          if [ -f requirements.txt ]; then
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+          else
+            echo "No requirements.txt found — skipping pip install"
+          fi
+
+      - name: Install vcpkg dependencies (reads vcpkg.json)
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: ${{ github.workspace }}/vcpkg
+          vcpkgJsonGlob: 'vcpkg.json'
+          # optional: you can set the triplet if needed, e.g. x64-linux
+          # triplet: 'x64-linux'
+
+      - name: List repo (debug)
+        run: |
+          echo "Workspace: $GITHUB_WORKSPACE"
+          ls -la
+          echo "cpp directory:"
+          ls -la cpp || true
+          echo "vcpkg dir top:"
+          ls -la ${{ github.workspace }}/vcpkg || true
+
       - name: Configure CMake
-        run: >
-          cmake -B cpp/build -S cpp
-          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
-
-      # 6. Build the project
-      # This step compiles your C++ code into the 'mlcore_cpp' Python module.
-      - name: Build project with CMake
-        run: cmake --build cpp/build --config Release
-
-      # 7. Generate Python stubs (.pyi files)
-      # This step runs your 'generate_stubs.sh' script to create type hints for your module.
-      - name: Generate pyi stubs
         run: |
-          # Set the environment variables that your script needs
-          export BUILD_DIR=${{ github.workspace }}/cpp/build
-          export STUB_OUT=${{ github.workspace }}/cpp/stubs
-          
-          # Make sure the output directory exists before running the script
-          mkdir -p $STUB_OUT
-          
-          # Execute the script
-          bash ./generate_stubs.sh
-          
-      # 8. (Optional) Run tests
-      # You can uncomment this section if you add tests in your 'tests' folder.
-      # - name: Run tests
-      #   run: |
-      #     # Add the new C++ module to the Python path so it can be imported
-      #     export PYTHONPATH=${{ github.workspace }}/cpp/build:$PYTHONPATH
-      #     # Install pytest and run it
-      #     pip install pytest
-      #     pytest tests/
+          mkdir -p "${BUILD_DIR}"
+          cmake -S cpp -B "${BUILD_DIR}" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+
+      - name: Build project with CMake (Release)
+        run: cmake --build "${BUILD_DIR}" --config Release -- -j$(nproc)
+
+      - name: Generate pyi stubs (if script exists)
+        run: |
+          if [ -x "./generate_stubs.sh" ]; then
+            export BUILD_DIR=${BUILD_DIR}
+            export STUB_OUT=${{ github.workspace }}/cpp/stubs
+            mkdir -p "$STUB_OUT"
+            bash ./generate_stubs.sh
+          else
+            echo "No generate_stubs.sh executable found at repo root — skipping stubs generation"
+          fi
+
+      - name: List build outputs (debug)
+        run: |
+          echo "Contents of build dir:"
+          ls -la "${BUILD_DIR}" || true
+          echo "Contents of cpp:"
+          ls -la cpp || true
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpp-build
+          path: |
+            ${{ github.workspace }}/cpp/build
+            ${{ github.workspace }}/cpp/stubs

@@ -1,7 +1,6 @@
 {
   "name": "mlcore",
   "version-string": "0.1.0",
-  "builtin-baseline": "0d65a3a4169f4e2f8923a1a27e7d692885994f71",
   "dependencies": [
     "pybind11",
     "xtensor",

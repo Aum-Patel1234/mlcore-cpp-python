@@ -1,4 +1,4 @@
-#include "logistic_regression.h"
+#include "../../include/logistic_regression.h"
 #include "common.hpp"
 #include <cmath>
 #include <cstddef>

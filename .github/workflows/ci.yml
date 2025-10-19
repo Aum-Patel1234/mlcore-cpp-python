@@ -44,12 +44,28 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           pip install pybind11 numpy
 
+      - name: Install vcpkg (manual bootstrap)
+        run: |
+          echo "VCPKG_DIR=${VCPKG_DIR}"
+          # clone vcpkg (shallow is OK here; use --depth 1 to speed up)
+          git clone --depth 1 https://github.com/microsoft/vcpkg.git "${VCPKG_DIR}"
+          cd "${VCPKG_DIR}"
+          ./bootstrap-vcpkg.sh
+
       - name: Install vcpkg dependencies (manifest mode)
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgDirectory: ${{ env.VCPKG_DIR }}
-          vcpkgJsonGlob: 'vcpkg.json'
-          triplet: ${{ env.VCPKG_TRIPLET }}
+        run: |
+          # find where your vcpkg.json is (repo root or cpp/)
+          if [ -f "${{ github.workspace }}/vcpkg.json" ]; then
+            pushd "${{ github.workspace }}"
+          elif [ -f "${{ github.workspace }}/cpp/vcpkg.json" ]; then
+            pushd "${{ github.workspace }}/cpp"
+          else
+            echo "No vcpkg.json found — skipping vcpkg install"
+            exit 0
+          fi
+          # install as manifest-mode project (reads vcpkg.json)
+          "${VCPKG_DIR}/vcpkg" install --triplet ${VCPKG_TRIPLET}
+          popd
 
       - name: Show vcpkg top-level (debug)
         run: |

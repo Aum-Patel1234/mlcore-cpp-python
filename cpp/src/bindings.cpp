@@ -1,5 +1,5 @@
-#include "linear_model/linear_regression.h"
-#include "linear_model/logistic_regression.h"
+#include "../include/linear_regression.h"
+#include "../include/logistic_regression.h"
 #include "ndarray/ndarray.h"
 #include "xtensor_python_config.h"
 #include <cstdint>

@@ -4,8 +4,8 @@
   "dependencies": [
     "pybind11",
     "xtensor",
-    "xtensor-python",
     "xtensor-blas",
+    "xtl",
     "openblas"
   ]
 }

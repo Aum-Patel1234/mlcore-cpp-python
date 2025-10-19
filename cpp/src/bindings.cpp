@@ -1,6 +1,7 @@
 #include "../include/linear_regression.h"
 #include "../include/logistic_regression.h"
 #include "ndarray/ndarray.h"
+#include "nn/nn.hpp"
 #include "xtensor_python_config.h"
 #include <cstdint>
 #include <pybind11/numpy.h>
@@ -81,4 +82,13 @@ PYBIND11_MODULE(mlcore_cpp, m) {
            py::arg("iterations") = 1000)
       .def("predict", &LogisticRegression::predict, py::arg("X"))
       .def("printSlopeIntercept", &LogisticRegression::printSlopeIntercept);
+
+  py::class_<NeuralNetwork2L>(m, "NeuralNetwork2L")
+      .def(py::init<py::array_t<double> &, py::array_t<double> &, int, int, int,
+                    double, int>(),
+           py::arg("x"), py::arg("y"), py::arg("n_x"), py::arg("n_y"),
+           py::arg("iterations") = 1000, py::arg("learning_rate") = 0.01,
+           py::arg("n_h") = 4)
+      .def("train", &NeuralNetwork2L::train)
+      .def("predict", &NeuralNetwork2L::predict, py::arg("X"));
 }

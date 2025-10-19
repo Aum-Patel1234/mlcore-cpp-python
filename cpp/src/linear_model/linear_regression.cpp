@@ -9,8 +9,8 @@
 #include <xtensor/views/xstrided_view.hpp>
 #define FORCE_IMPORT_ARRAY
 
+#include "../../include/common.hpp"
 #include "../../include/linear_regression.h"
-#include "common.hpp"
 #include <iostream>
 #include <xtensor-blas/xlinalg.hpp>
 #include <xtensor-python/pyarray.hpp>

@@ -79,12 +79,15 @@ template <typename T> std::string Ndarray<T>::dtype() const {
 
 template <typename T> void Ndarray<T>::cpp_forloop() const {
   auto start = std::chrono::high_resolution_clock::now();
-  for (int i = 0; i < 10000000; i++) {
+  std::uint64_t var = 0;
+  for (std::uint64_t i = 0; i < 1'000'000'000; i++) {
+    var += 1;
   }
   auto end = std::chrono::high_resolution_clock::now();
   auto duration =
       std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-  std::cout << "C++ Time taken: " << duration.count() << " ms" << std::endl;
+  std::cout << "\nC++ Time taken: " << duration.count() << " ms, resulst - "
+            << var << std::endl;
 }
 
 // IMPORTANT: as it helps in compile time

@@ -26,18 +26,23 @@ wrapper.cpp_forloop()
 
 start = time.time()
 
-for i in range(10000000):
+for i in range(1_000_000_000):
     pass
 
 end = time.time()
 print(f"Python Time taken: {(end - start) * 1000:.2f} ms")
 
-# ['NdarrayWrapperDouble', 'NdarrayWrapperFloat', 'NdarrayWrapperInt16', 'NdarrayWrapperInt32', 'NdarrayWrapperInt64', 'NdarrayWrapperInt8', 'NdarrayWrapperLongDouble', 'NdarrayWrapperUI
-# nt16', 'NdarrayWrapperUInt32', 'NdarrayWrapperUInt64', 'NdarrayWrapperUInt8', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__']
+# ['LinearRegression', 'LogisticRegression', 'NdarrayWrapperDouble', 'NdarrayWrapperFloat', 'NdarrayWrapperInt16', 'NdarrayWrapperInt32', 'NdarrayWrapperInt64', 'NdarrayWrapperInt8', 'NdarrayW
+# rapperLongDouble', 'NdarrayWrapperUInt16', 'NdarrayWrapperUInt32', 'NdarrayWrapperUInt64', 'NdarrayWrapperUInt8', 'NeuralNetwork2L', '__doc__', '__file__', '__loader__', '__name__', '__packa
+# ge__', '__spec__']
 # int8_t
-# 4
-# [2, 2]
+# 6
+# [2, 3]
 # 2
-# [5, 1, 2, 4]
-# C++ Time taken: 29 ms
-# Python Time taken: 514.56 ms
+# Array made by xtensor -  [[5 1 4]
+#  [2 4 3]]
+#
+# normal vec -  [5, 1, 4, 2, 4, 3]
+#
+# C++ Time taken: 3096 ms, resulst - 1000000000
+# Python Time taken: 57911.21 ms

@@ -1,7 +1,7 @@
 #include "common.hpp"
 
 void helper(xt::xarray<double> &X, xt::xarray<double> &Y,
-            py::array_t<double> &x, py::array_t<double> &y) {
+            const py::array_t<double> &x, const py::array_t<double> &y) {
   py::buffer_info x_buf = x.request();
   py::buffer_info y_buf = y.request();
 
@@ -26,7 +26,7 @@ void helper(xt::xarray<double> &X, xt::xarray<double> &Y,
                 xt::no_ownership(), y_shape, y_strides);
 }
 
-void helperOne(xt::xarray<double> &X, py::array_t<double> &x) {
+void helperOne(xt::xarray<double> &X, const py::array_t<double> &x) {
   py::buffer_info buffer = x.request();
 
   std::vector<std::size_t> shape(buffer.shape.begin(), buffer.shape.end());

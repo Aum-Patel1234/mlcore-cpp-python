@@ -81,11 +81,17 @@ jobs:
 
       - name: Configure CMake (use vcpkg toolchain)
         run: |
-          export PYTHON_EXECUTABLE="$(which python)"
-          cmake -S cpp -B "${BUILD_DIR}" -DCMAKE_BUILD_TYPE=Release \
+          PY=$(python3 -c "import sys; print(sys.executable)")
+          PY_INC=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])")
+          PY_LIB=$(python3 -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")
+
+          cmake -S cpp -B "${BUILD_DIR}" \
+            -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_DIR }}/scripts/buildsystems/vcpkg.cmake \
             -DVCPKG_TARGET_TRIPLET=${{ env.VCPKG_TRIPLET }} \
-            -DPYTHON_EXECUTABLE="${PYTHON_EXECUTABLE}" \
+            -DPython_EXECUTABLE="$PY" \
+            -DPython_INCLUDE_DIR="$PY_INC" \
+            -DPython_LIBRARY="$PY_LIB" \
             -D CMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Build project with CMake

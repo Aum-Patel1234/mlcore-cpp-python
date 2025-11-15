@@ -81,18 +81,55 @@ jobs:
 
       - name: Configure CMake (use vcpkg toolchain)
         run: |
-          PY=$(python3 -c "import sys; print(sys.executable)")
-          PY_INC=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])")
-          PY_LIB=$(python3 -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")
+          set -euo pipefail
 
+          # Use the same python3 binary used in this runner
+          PY=$(python3 -c "import sys; print(sys.executable)")
+          echo "Python executable: $PY"
+
+          # Python include (headers)
+          PY_INC=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])")
+          echo "Python include dir: $PY_INC"
+          ls -la "$PY_INC" || true
+
+          # NumPy include dir (C headers)
+          PY_NUMPY_INC=$(python3 -c "import numpy as np; import os; print(np.get_include())")
+          echo "NumPy include dir: $PY_NUMPY_INC"
+          ls -la "$PY_NUMPY_INC" || true
+
+          # Python library file (libpythonX.Y.so or libpythonX.Y.a)
+          PY_LIBDIR=$(python3 -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR') or sysconfig.get_config_var('libdir'))")
+          PY_LDB=$(python3 -c "import sysconfig; ld=sysconfig.get_config_var('LDLIBRARY'); print(ld if ld is not None else '')")
+          if [ -n "$PY_LDB" ]; then
+            PY_LIB="$PY_LIBDIR/$PY_LDB"
+          else
+            # fallback: try to find libpython*.so in libdir
+            PY_LIB=$(ls "$PY_LIBDIR"/libpython* 2>/dev/null | head -n 1 || true)
+          fi
+          echo "Candidate Python library: $PY_LIB"
+          [ -f "$PY_LIB" ] || echo "WARNING: python library file not found at $PY_LIB (may still be ok if FindPython uses embed info)"
+
+          # Show installed Python + numpy versions
+          python3 -c "import sys, numpy as np; print('pyver=', sys.version.split()[0], 'numpy=', np.__version__)"
+
+          # Show where vcpkg toolchain is
+          echo "VCPKG toolchain: ${{ env.VCPKG_DIR }}/scripts/buildsystems/vcpkg.cmake"
+          file "${{ env.VCPKG_DIR }}/scripts/buildsystems/vcpkg.cmake" || true
+
+          # Run cmake with explicit Python variables (these are the usual FindPython cache variables)
           cmake -S cpp -B "${BUILD_DIR}" \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_DIR }}/scripts/buildsystems/vcpkg.cmake \
             -DVCPKG_TARGET_TRIPLET=${{ env.VCPKG_TRIPLET }} \
             -DPython_EXECUTABLE="$PY" \
+            -DPython_ROOT_DIR="$(dirname $(dirname "$PY"))" \
             -DPython_INCLUDE_DIR="$PY_INC" \
             -DPython_LIBRARY="$PY_LIB" \
-            -D CMAKE_EXPORT_COMPILE_COMMANDS=ON
+            -DPython_NumPy_INCLUDE_DIRS="$PY_NUMPY_INC" \
+            -D CMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DPython_FIND_REGISTRY=NEVER \
+            -DPython_FIND_IMPLEMENTATIONS=CPython \
+            -DPython_FIND_STRATEGY=LOCATION
 
       - name: Build project with CMake
         run: |

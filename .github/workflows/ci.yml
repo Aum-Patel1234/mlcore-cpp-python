@@ -44,13 +44,15 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           pip install pybind11 numpy
 
-      - name: Install vcpkg (manual bootstrap)
+      - name: Install vcpkg (manual bootstrap) + pybind11 port
         run: |
           echo "VCPKG_DIR=${VCPKG_DIR}"
-          # clone vcpkg (shallow is OK here; use --depth 1 to speed up)
+          # clone vcpkg
           git clone --depth 1 https://github.com/microsoft/vcpkg.git "${VCPKG_DIR}"
           cd "${VCPKG_DIR}"
           ./bootstrap-vcpkg.sh
+          # ensure pybind11 CMake config is available (install the vcpkg port)
+          ./vcpkg install pybind11:${{ env.VCPKG_TRIPLET }}
 
       - name: Install vcpkg dependencies (manifest mode)
         run: |

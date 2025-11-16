@@ -11,6 +11,7 @@
 #include "../include/linear_regression.h"
 #include "../include/logistic_regression.h"
 #include "../include/regularization.hpp"
+#include "kmeans.hpp"
 #include "ndarray/ndarray.h"
 #include "nn/nn.hpp"
 #include "xtensor_python_config.h"
@@ -113,4 +114,10 @@ PYBIND11_MODULE(mlcore_cpp, m) {
       .def("printCost", &Regularization::printCost, py::arg("y"), py::arg("y_pred"))
       .def("printSlopeIntercept", &Regularization::printSlopeIntercept)
       .def("predict", &Regularization::predict, py::arg("X"));
+
+  py::class_<Kmeans>(m, "Kmeans")
+      .def(py::init<int, int>(), py::arg("k"), py::arg("iterations") = 100)
+      .def("fit", &Kmeans::fit, py::arg("X"))
+      .def("predict", &Kmeans::predict, py::arg("X"))
+      .def("printCentroids", &Kmeans::printCentroids);
 }

@@ -25,13 +25,16 @@ class Kmeans {
   xt::xarray<double> X, centroids;
 
   inline void minmaxScaling(xt::xarray<double>& x);
+  inline void intializeCentroids(xt::xarray<double>& x);
+  inline xt::xarray<double> findDistanceFromCentroid(const xt::xarray<double>& x) const;
+  inline std::vector<int> findLabel(const xt::xarray<double>& distances) const;
 
  public:
   Kmeans(int k, int iterations = 100);
 
   void fit(const py::array_t<double>& x_in);
   void printCentroids() const;
-  py::array_t<double> predict(py::array_t<double>& x_in);
+  py::array_t<int> predict(py::array_t<double>& x_in);
 };
 
 #endif  // !KMEANS

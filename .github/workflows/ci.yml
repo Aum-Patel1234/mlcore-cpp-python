@@ -44,28 +44,22 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           pip install pybind11 numpy
 
-      - name: Install vcpkg (manual bootstrap) + pybind11 port
+      - name: Install vcpkg (manual bootstrap)
         run: |
-          echo "VCPKG_DIR=${VCPKG_DIR}"
-          # clone vcpkg
           git clone --depth 1 https://github.com/microsoft/vcpkg.git "${VCPKG_DIR}"
           cd "${VCPKG_DIR}"
           ./bootstrap-vcpkg.sh
-          # ensure pybind11 CMake config is available (install the vcpkg port)
-          ./vcpkg install pybind11:${{ env.VCPKG_TRIPLET }}
 
       - name: Install vcpkg dependencies (manifest mode)
         run: |
-          # find where your vcpkg.json is (repo root or cpp/)
           if [ -f "${{ github.workspace }}/vcpkg.json" ]; then
             pushd "${{ github.workspace }}"
           elif [ -f "${{ github.workspace }}/cpp/vcpkg.json" ]; then
             pushd "${{ github.workspace }}/cpp"
           else
-            echo "No vcpkg.json found — skipping vcpkg install"
+            echo "No vcpkg.json found — skipping"
             exit 0
           fi
-          # install as manifest-mode project (reads vcpkg.json)
           "${VCPKG_DIR}/vcpkg" install --triplet ${VCPKG_TRIPLET}
           popd
 

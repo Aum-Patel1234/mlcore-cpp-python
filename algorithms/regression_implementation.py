@@ -125,7 +125,7 @@ class Regression2Variables:
 
 def main():
     # main function
-    file_path = r"basics\data\years_experience_salary.xlsx"  # Constant file path
+    file_path = r"../../data/years_experience_salary.xlsx"  # Constant file path
 
     df = pd.read_excel(file_path)
     # print(df)
@@ -149,4 +149,3 @@ def main():
 
 if __name__ == "__main__":  # Prevents execution when imported
     main()
-

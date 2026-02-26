@@ -10,128 +10,75 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      BUILD_DIR: ${{ github.workspace }}/cpp/build
       VCPKG_DIR: ${{ github.workspace }}/vcpkg
       VCPKG_TRIPLET: x64-linux
+      BUILD_DIR: ${{ github.workspace }}/cpp/build
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Setup Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: Show Python info (debug)
-        run: |
-          python -V
-          which python
-          python -c "import sys, sysconfig; print('prefix=', sys.prefix); print('platlib=', sysconfig.get_paths().get('platlib'))"
-          pip --version
-
-      - name: Install system packages (build tools, deps)
+      - name: Install system packages (build tools)
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential cmake ninja-build pkg-config git wget unzip \
-            python3 python3-dev python3-pip python3-numpy python3-venv \
-            libopenblas-dev liblapack-dev \
-            autoconf autoconf-archive automake libtool
+            build-essential cmake ninja-build git wget unzip \
+            python3-dev python3-pip python3-venv \
+            libopenblas-dev liblapack-dev
 
-      - name: Install pip basics (pybind11 via pip helps CMake detection)
+      - name: Install python tools (pip)
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install pybind11 numpy
+          pip install pybind11 pybind11-stubgen numpy
 
-      - name: Install vcpkg (manual bootstrap)
+      - name: Install vcpkg
         run: |
           git clone --depth 1 https://github.com/microsoft/vcpkg.git "${VCPKG_DIR}"
           cd "${VCPKG_DIR}"
           ./bootstrap-vcpkg.sh
 
-      - name: Install vcpkg dependencies (manifest mode)
+      - name: Install vcpkg dependencies (if vcpkg.json present)
         run: |
           if [ -f "${{ github.workspace }}/vcpkg.json" ]; then
-            pushd "${{ github.workspace }}"
+            (cd "${{ github.workspace }}" && "${VCPKG_DIR}/vcpkg" install --triplet ${VCPKG_TRIPLET})
           elif [ -f "${{ github.workspace }}/cpp/vcpkg.json" ]; then
-            pushd "${{ github.workspace }}/cpp"
+            (cd "${{ github.workspace }}/cpp" && "${VCPKG_DIR}/vcpkg" install --triplet ${VCPKG_TRIPLET})
           else
-            echo "No vcpkg.json found — skipping"
-            exit 0
+            echo "No vcpkg.json found — skipping vcpkg install"
           fi
-          "${VCPKG_DIR}/vcpkg" install --triplet ${VCPKG_TRIPLET}
-          popd
 
-      - name: Show vcpkg top-level (debug)
-        run: |
-          echo "VCPKG_DIR=${{ env.VCPKG_DIR }}"
-          ls -la ${{ env.VCPKG_DIR }} || echo "vcpkg dir missing"
-          echo "Toolchain: ${{ env.VCPKG_DIR }}/scripts/buildsystems/vcpkg.cmake"
-          file ${{ env.VCPKG_DIR }}/scripts/buildsystems/vcpkg.cmake || true
-
-      - name: Prepare build dir
-        run: |
-          mkdir -p "${BUILD_DIR}"
-          ls -la cpp || echo "Warning: 'cpp' directory not found"
-
-      - name: Configure CMake (use vcpkg toolchain)
+      - name: Configure CMake (with vcpkg toolchain)
         run: |
           set -euo pipefail
-
-          # Use the same python3 binary used in this runner
+          mkdir -p "${BUILD_DIR}"
           PY=$(python3 -c "import sys; print(sys.executable)")
-          echo "Python executable: $PY"
-
-          # Python include (headers)
           PY_INC=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])")
-          echo "Python include dir: $PY_INC"
-          ls -la "$PY_INC" || true
+          PY_NUMPY_INC=$(python3 -c "import numpy as np; print(np.get_include())")
+          echo "Python: $PY"
+          echo "Python include: $PY_INC"
+          echo "NumPy include: $PY_NUMPY_INC"
 
-          # NumPy include dir (C headers)
-          PY_NUMPY_INC=$(python3 -c "import numpy as np; import os; print(np.get_include())")
-          echo "NumPy include dir: $PY_NUMPY_INC"
-          ls -la "$PY_NUMPY_INC" || true
-
-          # Python library file (libpythonX.Y.so or libpythonX.Y.a)
-          PY_LIBDIR=$(python3 -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR') or sysconfig.get_config_var('libdir'))")
-          PY_LDB=$(python3 -c "import sysconfig; ld=sysconfig.get_config_var('LDLIBRARY'); print(ld if ld is not None else '')")
-          if [ -n "$PY_LDB" ]; then
-            PY_LIB="$PY_LIBDIR/$PY_LDB"
-          else
-            # fallback: try to find libpython*.so in libdir
-            PY_LIB=$(ls "$PY_LIBDIR"/libpython* 2>/dev/null | head -n 1 || true)
-          fi
-          echo "Candidate Python library: $PY_LIB"
-          [ -f "$PY_LIB" ] || echo "WARNING: python library file not found at $PY_LIB (may still be ok if FindPython uses embed info)"
-
-          # Show installed Python + numpy versions
-          python3 -c "import sys, numpy as np; print('pyver=', sys.version.split()[0], 'numpy=', np.__version__)"
-
-          # Show where vcpkg toolchain is
-          echo "VCPKG toolchain: ${{ env.VCPKG_DIR }}/scripts/buildsystems/vcpkg.cmake"
-          file "${{ env.VCPKG_DIR }}/scripts/buildsystems/vcpkg.cmake" || true
-
-          # Run cmake with explicit Python variables (these are the usual FindPython cache variables)
           cmake -S cpp -B "${BUILD_DIR}" \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_DIR }}/scripts/buildsystems/vcpkg.cmake \
-            -DVCPKG_TARGET_TRIPLET=${{ env.VCPKG_TRIPLET }} \
+            -DCMAKE_TOOLCHAIN_FILE=${VCPKG_DIR}/scripts/buildsystems/vcpkg.cmake \
+            -DVCPKG_TARGET_TRIPLET=${VCPKG_TRIPLET} \
             -DPython_EXECUTABLE="$PY" \
-            -DPython_ROOT_DIR="$(dirname $(dirname "$PY"))" \
             -DPython_INCLUDE_DIR="$PY_INC" \
-            -DPython_LIBRARY="$PY_LIB" \
             -DPython_NumPy_INCLUDE_DIRS="$PY_NUMPY_INC" \
-            -D CMAKE_EXPORT_COMPILE_COMMANDS=ON \
             -DPython_FIND_REGISTRY=NEVER \
             -DPython_FIND_IMPLEMENTATIONS=CPython \
             -DPython_FIND_STRATEGY=LOCATION
 
-      - name: Build project with CMake
+      - name: Build project
         run: |
           cmake --build "${BUILD_DIR}" --config Release -- -j$(nproc)
 
-      - name: Generate pyi stubs (if script exists)
+      - name: Generate pyi stubs (optional)
         run: |
           if [ -x "./generate_stubs.sh" ]; then
             export BUILD_DIR=${BUILD_DIR}
@@ -142,7 +89,7 @@ jobs:
             echo "No generate_stubs.sh found — skipping stubs generation"
           fi
 
-      - name: List build outputs (debug)
+      - name: List outputs (debug)
         run: |
           echo "Contents of build dir:"
           ls -la "${BUILD_DIR}" || true

@@ -51,15 +51,23 @@ class DecisionTreeClassifier:
             leaf_value = self._majority_class(target_feature)
             return Node(value=leaf_value)
 
-        best_feature, best_gain = self._best_split(df, target_feature)
+        best_feature, threshold, best_gain = self._best_split(df, target_feature)
 
         if best_feature == None:
             leaf_value = self._majority_class(target_feature)
             return Node(value=leaf_value)
 
-        # choose split value [most common category]
-        split_val = df[best_feature].mode()[0]
-        left_df, right_df = self._split_dataset(df, best_feature, split_val)
+        # numerical col
+        if threshold is not None:
+            left_df = df[df[best_feature] < threshold]
+            right_df = df[df[best_feature] >= threshold]
+
+        # categoical col
+        else:
+            split_val = df[best_feature].mode()[0]
+            left_df = df[df[best_feature] == split_val]
+            right_df = df[df[best_feature] != split_val]
+            threshold = split_val
 
         if len(left_df) == 0 or len(right_df) == 0:
             leaf_value = self._majority_class(target_feature)
@@ -74,7 +82,7 @@ class DecisionTreeClassifier:
 
         return Node(
             feature_index=best_feature,
-            threshold=split_val,
+            threshold=threshold,
             left=left_subtree,
             right=right_subtree,
             info_gain=best_gain,
@@ -90,10 +98,16 @@ class DecisionTreeClassifier:
 
         feature_val = row[node.feature_index]
 
-        if feature_val == node.threshold:
-            return self._predict_row(row, node.left)
+        if isinstance(node.threshold, (int, float)):
+            if feature_val < node.threshold:
+                return self._predict_row(row, node.left)
+            else:
+                return self._predict_row(row, node.right)
         else:
-            return self._predict_row(row, node.right)
+            if feature_val == node.threshold:
+                return self._predict_row(row, node.left)
+            else:
+                return self._predict_row(row, node.right)
 
     def predict(self, X: pd.DataFrame) -> pd.Series:
         preds = []
@@ -113,34 +127,81 @@ class DecisionTreeClassifier:
             gini = gini impurity
         """
         best_feature = None
+        best_threshold = None
         best_metric = -float("inf")
 
         for col in data.columns:
             if col == target_feature.name:
                 continue
 
-            if metric == "ig":
-                feature_metric = self._getInformationGain(data[col], target_feature)
+            # Numeric features
+            if pd.api.types.is_numeric_dtype(data[col]):
+                values = sorted(data[col].unique())
 
-            elif metric == "gini":
-                parent_gini = self._getGiniIndex(target_feature)
-                weighted_gini = 0.0
+                midpoints = []
+                for i in range(1, len(values)):
+                    midpoints.append((values[i] + values[i - 1]) / 2)
 
-                for val in data[col].unique():
-                    subset = target_feature[data[col] == val]
-                    weight = subset.size / target_feature.size
-                    weighted_gini += weight * self._getGiniIndex(subset)
+                for midpoint in midpoints:
+                    left = target_feature[data[col] < midpoint]
+                    right = target_feature[data[col] >= midpoint]
 
-                feature_metric = parent_gini - weighted_gini
+                    if metric == "ig":
+                        h_parent = self._getEntropy(target_feature)
+
+                        w_left = len(left) / len(target_feature)
+                        w_right = len(right) / len(target_feature)
+
+                        feature_metric = (
+                            h_parent
+                            - w_left * self._getEntropy(left)
+                            - w_right * self._getEntropy(right)
+                        )
+                    elif metric == "gini":
+                        g_parent = self._getGiniIndex(target_feature)
+
+                        w_left = len(left) / len(target_feature)
+                        w_right = len(right) / len(target_feature)
+
+                        feature_metric = (
+                            g_parent
+                            - w_left * self._getGiniIndex(left)
+                            - w_right * self._getGiniIndex(right)
+                        )
+
+                    else:
+                        raise ValueError("metric must be 'ig' or 'gini'")
+
+                    if feature_metric > best_metric:
+                        best_metric = feature_metric
+                        best_feature = col
+                        best_threshold = midpoint
+
+            # Categorical features
             else:
-                raise ValueError("metric must be 'ig' or 'gini'")
+                if metric == "ig":
+                    feature_metric = self._getInformationGain(data[col], target_feature)
 
-            if feature_metric > best_metric:
-                best_metric = feature_metric
-                best_feature = col
+                elif metric == "gini":
+                    parent_gini = self._getGiniIndex(target_feature)
+                    weighted_gini = 0.0
+
+                    for val in data[col].unique():
+                        subset = target_feature[data[col] == val]
+                        weight = subset.size / target_feature.size
+                        weighted_gini += weight * self._getGiniIndex(subset)
+
+                    feature_metric = parent_gini - weighted_gini
+                else:
+                    raise ValueError("metric must be 'ig' or 'gini'")
+
+                if feature_metric > best_metric:
+                    best_metric = feature_metric
+                    best_feature = col
+                    best_threshold = None
             # print(col, " - ", feature_metric)
 
-        return best_feature, best_metric
+        return best_feature, best_threshold, best_metric
 
     def _getEntropy(self, feature: pd.Series):
         # IMPORTANT: Entropy is surprise * probablity(surprise)

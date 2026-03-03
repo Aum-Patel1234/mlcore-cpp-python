@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.datasets import load_iris
+from sklearn.datasets import load_iris, load_wine
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.tree import DecisionTreeClassifier as SkDecisionTree
@@ -41,7 +41,11 @@ class DecisionTreeClassifier:
         return left, right
 
     def build_tree(
-        self, df: pd.DataFrame, target_feature: pd.Series, curr_depth=0
+        self,
+        df: pd.DataFrame,
+        target_feature: pd.Series,
+        curr_depth=0,
+        metric: str = "gini",
     ) -> Node | None:
         if (
             curr_depth >= self.max_depth
@@ -51,7 +55,9 @@ class DecisionTreeClassifier:
             leaf_value = self._majority_class(target_feature)
             return Node(value=leaf_value)
 
-        best_feature, threshold, best_gain = self._best_split(df, target_feature)
+        best_feature, threshold, best_gain = self._best_split(
+            df, target_feature, metric
+        )
 
         if best_feature == None:
             leaf_value = self._majority_class(target_feature)
@@ -74,10 +80,16 @@ class DecisionTreeClassifier:
             return Node(value=leaf_value)
 
         left_subtree = self.build_tree(
-            left_df, left_df[target_feature.name], curr_depth + 1
+            left_df,
+            target_feature=left_df[target_feature.name],
+            curr_depth=curr_depth + 1,
+            metric=metric,
         )
         right_subtree = self.build_tree(
-            right_df, right_df[target_feature.name], curr_depth + 1
+            right_df,
+            target_feature=right_df[target_feature.name],
+            curr_depth=curr_depth + 1,
+            metric=metric,
         )
 
         return Node(
@@ -88,9 +100,9 @@ class DecisionTreeClassifier:
             info_gain=best_gain,
         )
 
-    def fit(self, X: pd.DataFrame, target_col: str | pd.Series) -> None:
+    def fit(self, X: pd.DataFrame, target_col: str | pd.Series, metric="gini") -> None:
         target = X[target_col] if isinstance(target_col, str) else target_col
-        self.root = self.build_tree(X, target)
+        self.root = self.build_tree(X, target_feature=target, metric=metric)
 
     def _predict_row(self, row: pd.Series, node: Node):
         if node.value is not None:
@@ -136,7 +148,7 @@ class DecisionTreeClassifier:
 
             # Numeric features
             if pd.api.types.is_numeric_dtype(data[col]):
-                values = sorted(data[col].unique())
+                values = np.sort(data[col].unique())
 
                 midpoints = []
                 for i in range(1, len(values)):
@@ -245,8 +257,9 @@ class DecisionTreeClassifier:
         )
 
 
-def test_on_iris():
+def test_on_iris_wine():
     iris = load_iris()
+    wine = load_wine()
 
     X = pd.DataFrame(iris.data, columns=iris.feature_names)
     y = pd.Series(iris.target, name="species")
@@ -257,7 +270,7 @@ def test_on_iris():
 
     # my tree
     dt = DecisionTreeClassifier(max_depth=3)
-    dt.fit(xtrain.join(ytrain), "species")
+    dt.fit(xtrain.join(ytrain), target_col="species")
 
     preds = dt.predict(xtest)
 
@@ -272,6 +285,26 @@ def test_on_iris():
 
     print("\n=== Sklearn Tree (Iris) ===")
     print("Accuracy:", accuracy_score(ytest, sk_preds))
+
+    # wine
+    Xw = pd.DataFrame(wine.data, columns=wine.feature_names)
+    yw = pd.Series(wine.target, name="class")
+
+    xtrain_w, xtest_w, ytrain_w, ytest_w = train_test_split(
+        Xw, yw, train_size=0.7, random_state=0
+    )
+
+    dt_w = DecisionTreeClassifier(max_depth=3)
+    dt_w.fit(xtrain_w.join(ytrain_w), target_col="class", metric="ig")
+    preds_w = dt_w.predict(xtest_w)
+
+    sk_dt_w = SkDecisionTree(max_depth=3, random_state=0)
+    sk_dt_w.fit(xtrain_w, ytrain_w)
+    sk_preds_w = sk_dt_w.predict(xtest_w)
+
+    print("\n=== WINE ===")
+    print("Custom:", dt_w.score(xtest_w, ytest_w))
+    print("Sklearn:", accuracy_score(ytest_w, sk_preds_w))
 
 
 if __name__ == "__main__":
@@ -294,7 +327,7 @@ if __name__ == "__main__":
 
     # My decision tree
     dt = DecisionTreeClassifier()
-    dt.fit(xtrain.join(ytrain), "Play")
+    dt.fit(xtrain.join(ytrain), target_col="Play")
 
     preds = dt.predict(xtest)
 
@@ -327,5 +360,5 @@ if __name__ == "__main__":
 
     decoded_preds = y_le.inverse_transform(sk_preds)
 
-    test_on_iris()
+    test_on_iris_wine()
     # for now there is no numerical support

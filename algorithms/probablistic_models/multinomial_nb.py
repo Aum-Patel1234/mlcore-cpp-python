@@ -134,20 +134,6 @@ class MultiNomialNaiveBayesClassifier:
         return accuracy_score(y_test, y_real)
 
 
-class GaussianNaiveBayesClassifier:
-    def __init__(self) -> None:
-        pass
-
-    def fit(self, X: pd.DataFrame, y: pd.Series) -> None:
-        pass
-
-    def predict(self, X: pd.DataFrame) -> pd.Series:
-        pass
-
-    def score(self, X_test: pd.DataFrame, y_real: pd.Series) -> float:
-        pass
-
-
 from sklearn.datasets import load_wine
 
 
